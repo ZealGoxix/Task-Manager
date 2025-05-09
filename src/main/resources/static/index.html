@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Manager</title>
+</head>
+
+<body>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    #taskForm {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 50vh;
+    }
+    #taskList {
+      max-width: 500px;
+      margin: 20px auto;
+      padding: 20px;
+      list-style: none;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+        /* Add button styling */
+      #taskList li {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 8px;
+        margin: 4px 0;
+        justify-content: space-between;
+        background: #f8f9fa;
+        border-radius: 4px;
+      }
+
+      #taskList button {
+        padding: 4px 8px;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      #taskList button:first-of-type { /* Done button */
+        background: #c3e6cb;
+        color: #155724;
+      }
+
+      #taskList button:last-of-type { /* Delete button */
+        background: #f5c6cb;
+        color: #721c24;
+      }
+      /* Add button container */
+      .button-container {
+        display: flex;
+        gap: 8px;
+        margin-left: auto; /* ← Pushes buttons to the right */
+      }
+  </style>
+
+  <!-- Form Container-->
+  <form id="taskForm">
+    <!-- Acutal Input -->
+    <input type="text" id="title" placeholder="Task title">
+    <!-- Acutal Button -->
+    <button type="submit">Add Task</button>
+    
+  </form>
+  <div>
+    <!-- Task List -->
+    <ul id="taskList"></ul>
+  </div>
+
+
+  <script>
+  document.getElementById('taskForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const title = document.getElementById('title').value;
+  const response = await fetch('http://localhost:8080/tasks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(title)
+  });
+  const task = await response.json();
+
+  // Create task list item
+  const taskItem = document.createElement('li');
+  taskItem.dataset.taskId = task.id;
+
+  // Create separate text element
+  const taskText = document.createElement('span');
+  taskText.textContent = `${task.id}: ${task.title}`; // Move text here
+
+  // Delete button
+  const deleteBtn = document.createElement('button');
+  deleteBtn.textContent = 'Delete';
+  deleteBtn.onclick = async () => {
+  await fetch(`http://localhost:8080/tasks/${task.id}`, { 
+    method: 'DELETE' 
+  });
+  await refreshTaskList(); // ← Refresh after deletion
+};
+
+  // Complete button
+  const completeBtn = document.createElement('button');
+  completeBtn.textContent = 'Done';
+  completeBtn.onclick = () => {
+    taskText.style.textDecoration = 'line-through';
+    taskText.style.opacity = '0.5';
+  };
+
+  // Add elements properly
+  const buttonContainer = document.createElement('div');
+  buttonContainer.className = 'button-container';
+  buttonContainer.append(completeBtn, deleteBtn);
+  
+  taskItem.append(taskText, buttonContainer);
+  // Append task item to the list
+  document.getElementById('taskList').appendChild(taskItem);
+  
+  document.getElementById('title').value = '';
+});
+
+async function refreshTaskList() {
+  const response = await fetch('http://localhost:8080/tasks');
+  const tasks = await response.json();
+  const taskList = document.getElementById('taskList');
+  
+  // Clear existing list
+  taskList.innerHTML = '';
+  
+  // Rebuild list with updated IDs AND BUTTONS
+  tasks.forEach(task => {
+    // Recreate the same structure as in submit handler
+    const taskItem = document.createElement('li');
+    taskItem.dataset.taskId = task.id;
+
+    // Task text
+    const taskText = document.createElement('span');
+    taskText.textContent = `${task.id}: ${task.title}`;
+
+    // Delete button
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.onclick = async () => {
+      await fetch(`http://localhost:8080/tasks/${task.id}`, { 
+        method: 'DELETE' 
+      });
+      await refreshTaskList();
+    };
+
+    // Complete button
+    const completeBtn = document.createElement('button');
+    completeBtn.textContent = 'Done';
+    completeBtn.onclick = () => {
+      taskText.style.textDecoration = 'line-through';
+      taskText.style.opacity = '0.5';
+    };
+
+    // Button container
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'button-container';
+    buttonContainer.append(completeBtn, deleteBtn);
+
+    // Assemble elements
+    taskItem.append(taskText, buttonContainer);
+    taskList.appendChild(taskItem);
+  });
+}
+</script>
+</body>
+</html>
